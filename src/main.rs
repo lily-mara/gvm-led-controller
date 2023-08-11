@@ -7,6 +7,8 @@ use btleplug::{
 use eyre::{bail, Result};
 use futures::stream::StreamExt;
 use tokio::time;
+use tracing::{debug, trace};
+use tracing_subscriber::EnvFilter;
 
 const SERVICE_UUID: uuid::Uuid = uuid::Uuid::from_bytes([
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x19, 0x10,
@@ -24,6 +26,10 @@ const CMD_LIGHT_OFF: &[u8] = &[
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
+
     let manager = Manager::new().await?;
 
     let adapters = manager.adapters().await?;
@@ -40,7 +46,7 @@ async fn main() -> Result<()> {
 
     led.connect().await?;
 
-    dbg!("connected");
+    debug!("connected");
 
     let service = find_service(&led).await?;
 
@@ -52,7 +58,11 @@ async fn main() -> Result<()> {
 
     tokio::spawn(async move {
         while let Some(notification) = notifications.next().await {
-            eprintln!("NOTIFY {:?} - {:?}", notification.uuid, notification.value);
+            debug!(
+                uuid=?notification.uuid,
+                value=%format!("{:02x?}", notification.value),
+                "notification"
+            );
         }
     });
 
@@ -61,6 +71,12 @@ async fn main() -> Result<()> {
 
     loop {
         for cmd in [CMD_LIGHT_ON, CMD_LIGHT_OFF] {
+            trace!(
+                service=?service.uuid,
+                characteristic=?characteristic.uuid,
+                cmd = %format!("{cmd:02x?}"),
+                "bluetooth write"
+            );
             led.write(characteristic, cmd, WriteType::WithoutResponse)
                 .await?;
             time::sleep(Duration::from_secs(1)).await;
