@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
 use btleplug::{
     api::{Central, Manager as _, Peripheral as _, ScanFilter, Service, WriteType},
@@ -11,6 +11,16 @@ use tokio::time;
 const SERVICE_UUID: uuid::Uuid = uuid::Uuid::from_bytes([
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x19, 0x10,
 ]);
+
+const CMD_INIT_SESSION: &[u8] = &[
+    0x4c, 0x54, 0x09, 0x00, 0x00, 0x53, 0x00, 0x00, 0x01, 0x00, 0x94, 0x74,
+];
+const CMD_LIGHT_ON: &[u8] = &[
+    0x4c, 0x54, 0x09, 0x00, 0x30, 0x57, 0x00, 0x00, 0x01, 0x01, 0x22, 0xdf,
+];
+const CMD_LIGHT_OFF: &[u8] = &[
+    0x4c, 0x54, 0x09, 0x00, 0x30, 0x57, 0x00, 0x00, 0x01, 0x00, 0x32, 0xfe,
+];
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -28,8 +38,6 @@ async fn main() -> Result<()> {
         time::sleep(Duration::from_millis(100)).await;
     };
 
-    let led = Arc::new(led);
-
     led.connect().await?;
 
     dbg!("connected");
@@ -40,65 +48,24 @@ async fn main() -> Result<()> {
 
     led.subscribe(characteristic).await?;
 
-    let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+    let mut notifications = led.notifications().await.unwrap();
 
-    let inner = led.clone();
     tokio::spawn(async move {
-        let mut notifications = inner.notifications().await.unwrap();
         while let Some(notification) = notifications.next().await {
-            eprintln!(
-                "PUT ON NOTICE {:?} - {:?}",
-                notification.uuid, notification.value
-            );
-            tx.send(()).await.unwrap();
+            eprintln!("NOTIFY {:?} - {:?}", notification.uuid, notification.value);
         }
     });
 
+    // led.write(characteristic, CMD_INIT_SESSION, WriteType::WithoutResponse)
+    //     .await?;
+
     loop {
-        println!("cmd turn on");
-
-        for cmd in [
-            &[
-                0x4cu8, 0x54, 0x09, 0x00, 0x00, 0x53, 0x00, 0x00, 0x01, 0x00, 0x94, 0x74,
-            ] as &[u8],
-            &[
-                0x4c, 0x54, 0x0e, 0x00, 0x30, 0x48, 0x00, 0x0b, 0x15, 0x21, 0x17, 0x28, 0x01, 0x03,
-                0x03, 0xae, 0xec,
-            ],
-            &[
-                0x4c, 0x54, 0x09, 0x00, 0x30, 0x57, 0x00, 0x00, 0x01, 0x01, 0x22, 0xdf,
-            ],
-        ] {
+        for cmd in [CMD_LIGHT_ON, CMD_LIGHT_OFF] {
             led.write(characteristic, cmd, WriteType::WithoutResponse)
                 .await?;
+            time::sleep(Duration::from_secs(1)).await;
         }
-        println!("done");
-
-        time::sleep(Duration::from_millis(100)).await;
-
-        println!("turn off");
-
-        for cmd in [
-            &[
-                0x4cu8, 0x54, 0x09, 0x00, 0x00, 0x53, 0x00, 0x00, 0x01, 0x00, 0x94, 0x74,
-            ] as &[u8],
-            &[
-                0x4c, 0x54, 0x0e, 0x00, 0x30, 0x48, 0x01, 0x0b, 0x15, 0x21, 0x17, 0x28, 0x01, 0x03,
-                0x03, 0x45, 0xcf,
-            ],
-            &[
-                0x4c, 0x54, 0x09, 0x00, 0x30, 0x57, 0x00, 0x00, 0x01, 0x00, 0x32, 0xfe,
-            ],
-        ] {
-            led.write(characteristic, cmd, WriteType::WithoutResponse)
-                .await?;
-        }
-        println!("done");
-
-        time::sleep(Duration::from_millis(100)).await;
     }
-
-    Ok(())
 }
 
 async fn find_service(led: &Peripheral) -> Result<Service> {
