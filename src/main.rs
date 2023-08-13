@@ -7,8 +7,12 @@ use btleplug::{
 use eyre::{bail, Result};
 use futures::stream::StreamExt;
 use tokio::time;
-use tracing::{debug, trace};
+use tracing::{debug, info};
 use tracing_subscriber::EnvFilter;
+
+use crate::protocol::{HsiCommand, Packable};
+
+mod protocol;
 
 const SERVICE_UUID: uuid::Uuid = uuid::Uuid::from_bytes([
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x19, 0x10,
@@ -16,12 +20,6 @@ const SERVICE_UUID: uuid::Uuid = uuid::Uuid::from_bytes([
 
 const CMD_INIT_SESSION: &[u8] = &[
     0x4c, 0x54, 0x09, 0x00, 0x00, 0x53, 0x00, 0x00, 0x01, 0x00, 0x94, 0x74,
-];
-const CMD_LIGHT_ON: &[u8] = &[
-    0x4c, 0x54, 0x09, 0x00, 0x30, 0x57, 0x00, 0x00, 0x01, 0x01, 0x22, 0xdf,
-];
-const CMD_LIGHT_OFF: &[u8] = &[
-    0x4c, 0x54, 0x09, 0x00, 0x30, 0x57, 0x00, 0x00, 0x01, 0x00, 0x32, 0xfe,
 ];
 
 #[tokio::main]
@@ -46,7 +44,7 @@ async fn main() -> Result<()> {
 
     led.connect().await?;
 
-    debug!("connected");
+    info!("connected");
 
     let service = find_service(&led).await?;
 
@@ -69,17 +67,32 @@ async fn main() -> Result<()> {
     // led.write(characteristic, CMD_INIT_SESSION, WriteType::WithoutResponse)
     //     .await?;
 
+    // trace!(
+    //     service=?service.uuid,
+    //     characteristic=?characteristic.uuid,
+    //     cmd = %format!("{cmd:02x?}"),
+    //     "write"
+    // );
+
+    let setup = [HsiCommand::Intensity(10)];
+
+    let pink = [HsiCommand::Hue(68), HsiCommand::Saturation(100)];
+    let white = [HsiCommand::Hue(0), HsiCommand::Saturation(0)];
+    let blue = [HsiCommand::Hue(48), HsiCommand::Saturation(100)];
+
+    for cmd in setup {
+        led.write(characteristic, &cmd.to_wire(), WriteType::WithoutResponse)
+            .await?;
+    }
+
     loop {
-        for cmd in [CMD_LIGHT_ON, CMD_LIGHT_OFF] {
-            trace!(
-                service=?service.uuid,
-                characteristic=?characteristic.uuid,
-                cmd = %format!("{cmd:02x?}"),
-                "bluetooth write"
-            );
-            led.write(characteristic, cmd, WriteType::WithoutResponse)
-                .await?;
-            time::sleep(Duration::from_secs(1)).await;
+        for color in [&blue, &pink, &white] {
+            for cmd in color {
+                led.write(characteristic, &cmd.to_wire(), WriteType::WithoutResponse)
+                    .await?;
+            }
+
+            time::sleep(Duration::from_millis(800)).await;
         }
     }
 }
