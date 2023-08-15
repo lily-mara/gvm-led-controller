@@ -1,8 +1,10 @@
+use std::fmt::Debug;
+
 const HEADER: [u8; 7] = [0x4c, 0x54, 0x09, 0x00, 0x30, 0x57, 0x00];
 
 pub type WireMessage = [u8; 12];
 
-pub trait Packable {
+pub trait Packable: Debug {
     fn pack(&self) -> Envelope;
 
     fn to_wire(&self) -> WireMessage {
@@ -10,26 +12,41 @@ pub trait Packable {
     }
 }
 
+#[derive(Debug)]
 pub enum PowerCommand {
     On,
     Off,
 }
 
+#[derive(Debug)]
 pub enum ModeCommand {
     Cct,
     Hsi,
     Scene,
 }
 
+#[derive(Debug)]
 pub enum HsiCommand {
     Hue(u8),
     Saturation(u8),
     Intensity(u8),
 }
 
+#[derive(Debug)]
+pub struct ColorTemperatureCommand(pub u8);
+
 pub struct Envelope {
     command: u8,
     arg: u8,
+}
+
+impl Packable for ColorTemperatureCommand {
+    fn pack(&self) -> Envelope {
+        Envelope {
+            command: 0x03,
+            arg: self.0,
+        }
+    }
 }
 
 impl Packable for ModeCommand {
