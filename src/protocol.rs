@@ -13,12 +13,14 @@ pub trait Packable: Debug {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum PowerCommand {
     On,
     Off,
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum ModeCommand {
     Cct,
     Hsi,
