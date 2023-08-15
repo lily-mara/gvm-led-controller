@@ -4,10 +4,10 @@ Using this as a grounds for working on Bluetooth stuff in Rust.
 
 - [x] Make the light turn on
 - [x] Make the light blink
-- [ ] Understand the packets being sent to the light
-- [ ] Minimize data transmission
-- [ ] Make the light blue
-- [ ] Make the light blink blue pink white
+- [x] Understand the packets being sent to the light
+- [x] Minimize data transmission
+- [x] Make the light blue
+- [x] Make the light blink blue pink white
 
 ## Streams
 
