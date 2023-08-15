@@ -100,6 +100,7 @@ impl Led {
         let data = command.to_wire();
         trace!(
             peripheral_id = ?self.peripheral.id(),
+            peripheral_mac = %self.peripheral.address(),
             message = %format!("{data:02x?}"),
             ?command,
             "write"
@@ -226,8 +227,8 @@ fn scan_forever() -> impl Stream<Item = Result<Led>> {
 
                 peripheral.connect().await?;
                 info!(
-                    id = ?peripheral.id(),
-                    mac = %peripheral.address(),
+                    peripheral_id = ?peripheral.id(),
+                    peripheral_mac = %peripheral.address(),
                     "connected"
                 );
 
