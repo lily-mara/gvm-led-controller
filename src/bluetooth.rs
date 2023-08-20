@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     gui::{LightGuiState, LightMode, LightSettingsState},
-    protocol::{ColorTemperatureCommand, ModeCommand},
+    protocol::{ColorTemperatureCommand, ModeCommand, PowerCommand},
 };
 use async_stream::stream;
 use btleplug::{
@@ -135,6 +135,16 @@ async fn write_state(
     state: &LightSettingsState,
     previous_state: &LightSettingsState,
 ) -> Result<()> {
+    if state.enabled != previous_state.enabled {
+        let cmd = if state.enabled {
+            PowerCommand::On
+        } else {
+            PowerCommand::Off
+        };
+
+        led.cmd(cmd).await?;
+    }
+
     match state.mode {
         LightMode::Hsi => {
             if state.hue != previous_state.hue {
