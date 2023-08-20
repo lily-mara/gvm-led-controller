@@ -59,13 +59,15 @@
        x="3.5603841e-06"
        y="3.5603841e-06" />
     <rect
-       style="fill:#ff9955;fill-opacity:1;stroke:#ff9a57;stroke-width:20;stroke-linecap:butt;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:#ff9955;fill-opacity:1;stroke:none;stroke-width:21.5311;stroke-linecap:butt;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
        id="rect7"
-       width="105.83334"
-       height="105.83334"
-       x="14.816662"
-       y="14.816662"
-       inkscape:label="background" />
+       width="111.125"
+       height="111.125"
+       x="12.170834"
+       y="12.170834"
+       inkscape:label="background"
+       ry="24.585773"
+       rx="24.585876" />
     <rect
        style="fill:#ff2a2a;fill-opacity:1;stroke:none;stroke-width:12.3256;stroke-linecap:butt;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
        id="rect8"
