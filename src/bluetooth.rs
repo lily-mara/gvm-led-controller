@@ -119,10 +119,37 @@ async fn connection(led: Led, state_stream: impl Stream<Item = LightSettingsStat
     pin_mut!(state_stream);
 
     let mut previous_state = LightSettingsState::default();
+    write_state_no_cmp(&led, &previous_state).await?;
+
     while let Some(state) = state_stream.next().await {
         write_state(&led, &state, &previous_state).await?;
 
         previous_state = state;
+    }
+
+    Ok(())
+}
+
+async fn write_state_no_cmp(led: &Led, state: &LightSettingsState) -> Result<()> {
+    let cmd = if state.enabled {
+        PowerCommand::On
+    } else {
+        PowerCommand::Off
+    };
+    led.cmd(cmd).await?;
+
+    match state.mode {
+        LightMode::Hsi => {
+            led.cmd(HsiCommand::Hue(state.hue)).await?;
+            led.cmd(HsiCommand::Saturation(state.saturation)).await?;
+            led.cmd(HsiCommand::Intensity(state.intensity)).await?;
+            led.cmd(ModeCommand::Hsi).await?;
+        }
+        LightMode::Cct => {
+            led.cmd(ColorTemperatureCommand(state.temperature)).await?;
+            led.cmd(HsiCommand::Intensity(state.intensity)).await?;
+            led.cmd(ModeCommand::Cct).await?;
+        }
     }
 
     Ok(())
