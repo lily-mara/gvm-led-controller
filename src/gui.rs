@@ -79,6 +79,8 @@ pub fn run(lights: Arc<Mutex<Vec<LightGuiState>>>) -> Result<(), Box<dyn std::er
 struct Gui {
     lights: Arc<Mutex<Vec<LightGuiState>>>,
     update_mode: UpdateMode,
+    use_global: bool,
+    global_state: LightSettingsState,
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -92,6 +94,44 @@ impl Gui {
         Self {
             lights,
             update_mode: UpdateMode::Immediate,
+            use_global: false,
+            global_state: Default::default(),
+        }
+    }
+
+    fn draw_global_pane(&mut self, ui: &mut Ui) {
+        ui.group(|ui| {
+            ui.label("GLOBAL");
+            let previous = self.global_state.clone();
+            draw_light_settings(ui, &mut self.global_state);
+            if self.global_state != previous {
+                for light in self.lights.lock().unwrap().iter_mut() {
+                    light.state = self.global_state.clone();
+                    if self.update_mode == UpdateMode::Immediate {
+                        light.pending_send = true;
+                    } else {
+                        light.state_needs_update = true;
+                    }
+                }
+            }
+        });
+    }
+
+    fn draw_settings(&mut self, ui: &mut Ui) {
+        ui.group(|ui| {
+            ui.label("Update Mode");
+            ui.radio_value(&mut self.update_mode, UpdateMode::Immediate, "Immediate");
+            ui.radio_value(&mut self.update_mode, UpdateMode::Commit, "Commit");
+        });
+        ui.group(|ui| {
+            ui.checkbox(&mut self.use_global, "Use Global Setting Pane");
+        });
+        if self.update_mode == UpdateMode::Commit {
+            if ui.small_button("Commit All States").clicked() {
+                for light in self.lights.lock().unwrap().iter_mut() {
+                    light.pending_send = true;
+                }
+            }
         }
     }
 }
@@ -100,23 +140,19 @@ impl eframe::App for Gui {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical(|ui| {
+                ui.horizontal(|ui| self.draw_settings(ui));
                 ui.horizontal(|ui| {
-                    ui.group(|ui| {
-                        ui.label("Update Mode");
-                        ui.radio_value(&mut self.update_mode, UpdateMode::Immediate, "Immediate");
-                        ui.radio_value(&mut self.update_mode, UpdateMode::Commit, "Commit");
-                    });
-                    if self.update_mode == UpdateMode::Commit {
-                        if ui.small_button("Commit All States").clicked() {
-                            for light in self.lights.lock().unwrap().iter_mut() {
-                                light.pending_send = true;
-                            }
+                    ui.vertical(|ui| {
+                        for light in self.lights.lock().unwrap().iter_mut() {
+                            draw_light_group(ui, light, self.update_mode);
                         }
-                    }
+                    });
+                    ui.vertical(|ui| {
+                        if self.use_global {
+                            self.draw_global_pane(ui)
+                        }
+                    });
                 });
-                for light in self.lights.lock().unwrap().iter_mut() {
-                    draw_light_group(ui, light, self.update_mode);
-                }
             });
         });
     }
