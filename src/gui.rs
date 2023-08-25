@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use eframe::{IconData, NativeOptions};
-use egui::{Button, Response, Slider, Ui};
+use egui::{Button, Color32, Direction, Response, Slider, Ui};
 use eyre::Result;
 use tokio::sync::mpsc::Sender;
 
@@ -60,7 +60,10 @@ impl LightGuiState {
 /// Start the GUI, blocks the main thread. Accepts a guarded list of lights
 /// which should be initially empty but will be filled in with real data by the
 /// `bluetooth` module as it scans and finds devices.
-pub fn run(lights: Arc<Mutex<Vec<LightGuiState>>>) -> Result<(), Box<dyn std::error::Error>> {
+pub fn run(
+    lights: Arc<Mutex<Vec<LightGuiState>>>,
+    demo: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     let icon_png_data = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/data/app-icon.png"));
     let native_options = NativeOptions {
         icon_data: Some(IconData::try_from_png_bytes(icon_png_data)?),
@@ -70,7 +73,7 @@ pub fn run(lights: Arc<Mutex<Vec<LightGuiState>>>) -> Result<(), Box<dyn std::er
     eframe::run_native(
         "GVM Director",
         native_options,
-        Box::new(|_cc| Box::new(Gui::new(lights))),
+        Box::new(move |_cc| Box::new(Gui::new(lights, demo))),
     )?;
 
     Ok(())
@@ -81,6 +84,7 @@ struct Gui {
     update_mode: UpdateMode,
     use_global: bool,
     global_state: LightSettingsState,
+    demo: bool,
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -90,12 +94,13 @@ enum UpdateMode {
 }
 
 impl Gui {
-    fn new(lights: Arc<Mutex<Vec<LightGuiState>>>) -> Self {
+    fn new(lights: Arc<Mutex<Vec<LightGuiState>>>, demo: bool) -> Self {
         Self {
             lights,
             update_mode: UpdateMode::Immediate,
             use_global: false,
             global_state: Default::default(),
+            demo,
         }
     }
 
@@ -118,6 +123,9 @@ impl Gui {
     }
 
     fn draw_settings(&mut self, ui: &mut Ui) {
+        if self.demo {
+            ui.colored_label(Color32::YELLOW, "DEMO MODE");
+        }
         ui.group(|ui| {
             ui.label("Update Mode");
             ui.radio_value(&mut self.update_mode, UpdateMode::Immediate, "Immediate");
@@ -142,6 +150,13 @@ impl eframe::App for Gui {
             ui.vertical(|ui| {
                 ui.horizontal(|ui| self.draw_settings(ui));
                 ui.horizontal(|ui| {
+                    if self.lights.lock().unwrap().is_empty() {
+                        ui.with_layout(
+                            egui::Layout::centered_and_justified(Direction::TopDown),
+                            |ui| ui.label("There are no light devices connected. This application will attempt to connect to any light that it can, with no configuration. Ensure your lights are powered on and in the 'APP' mode. To see a demo of the UI without controlling any real lights, re-launch the application with the `--demo` flag."),
+                        );
+                    }
+
                     ui.vertical(|ui| {
                         for light in self.lights.lock().unwrap().iter_mut() {
                             draw_light_group(ui, light, self.update_mode);

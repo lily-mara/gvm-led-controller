@@ -30,10 +30,9 @@ const SERVICE_UUID: uuid::Uuid = uuid::Uuid::from_bytes([
 // ];
 
 /// Useful for debugging GUI when there are no lights available to connect to -
-/// sits around doing nothing for a few seconds then slowly yields lights.
-/// Prints out commands sent to the light.
-pub(crate) async fn fake_scan_and_spawn(lights: Arc<Mutex<Vec<LightGuiState>>>) {
-    sleep(Duration::from_secs(1)).await;
+/// Slowly yields lights that the GUI sees as connected. Commands
+/// sent to the light are logged at INFO level.
+pub(crate) async fn scan_and_spawn_demo_mode(lights: Arc<Mutex<Vec<LightGuiState>>>) {
     lights.lock().unwrap().push(fake_device(1));
 
     sleep(Duration::from_secs(5)).await;

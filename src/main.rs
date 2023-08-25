@@ -12,9 +12,9 @@ mod protocol;
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 struct Args {
-    /// Fake the bluetooth stack
+    /// Fake the bluetooth stack for testing the UI
     #[arg(long)]
-    fake: bool,
+    demo: bool,
 }
 
 fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
@@ -32,14 +32,14 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     let rt = tokio::runtime::Runtime::new()?;
 
-    if args.fake {
-        warn!("--fake found on CLI, not running with a real bluetooth stack.");
-        rt.spawn(bluetooth::fake_scan_and_spawn(lights.clone()));
+    if args.demo {
+        warn!("--demo found on CLI, not running with a real bluetooth stack.");
+        rt.spawn(bluetooth::scan_and_spawn_demo_mode(lights.clone()));
     } else {
         rt.spawn(bluetooth::scan_and_spawn(lights.clone()));
     }
 
-    gui::run(lights)?;
+    gui::run(lights, args.demo)?;
 
     Ok(())
 }
