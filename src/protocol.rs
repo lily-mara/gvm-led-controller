@@ -35,6 +35,7 @@ pub enum HsiCommand {
 }
 
 #[derive(Debug)]
+/// Set the temperature (100s of Kelvin) - range [32, 56]
 pub struct ColorTemperatureCommand(pub u8);
 
 pub struct Envelope {

@@ -17,10 +17,18 @@ pub struct LightGuiState {
 /// The state of the settings that we should write to the light
 #[derive(Clone, PartialEq, Debug)]
 pub struct LightSettingsState {
+    /// Range: [0, 0x53)
     pub hue: u8,
+
+    /// Range: [0, 100]
     pub intensity: u8,
+
+    /// Range: [0, 100]
     pub saturation: u8,
+
+    /// 100s of Kelvin - Range: [32, 56]
     pub temperature: u8,
+
     pub mode: LightMode,
     pub enabled: bool,
 }
@@ -30,9 +38,9 @@ impl Default for LightSettingsState {
         Self {
             enabled: true,
             hue: 0,
-            intensity: 50,
+            intensity: 10,
             saturation: 100,
-            temperature: 0,
+            temperature: 32,
             mode: LightMode::Cct,
         }
     }
@@ -227,12 +235,12 @@ fn draw_light_settings(ui: &mut Ui, state: &mut LightSettingsState) {
 
         ui.group(|ui| match &mut state.mode {
             LightMode::Cct => {
-                let mut temperature_f32 = (state.temperature as f32 * 133.333 + 3200.0).floor();
+                let mut temperature_f32 = (state.temperature as f32 * 100.0).floor();
                 ui.add(
                     egui::Slider::new(&mut temperature_f32, 3200.0..=5600.0)
                         .text("Color Temperature"),
                 );
-                state.temperature = ((temperature_f32 - 3200.0) / 133.33).round() as u8;
+                state.temperature = (temperature_f32 / 100.0).round() as u8;
 
                 slider_u8(ui, &mut state.intensity, |val| {
                     Slider::new(val, 0.0..=100.0).text("Intensity")

@@ -13,7 +13,7 @@ use btleplug::{
     api::{Central, Characteristic, Manager as _, Peripheral as _, ScanFilter, WriteType},
     platform::{Adapter, Manager, Peripheral},
 };
-use eyre::{bail, Result};
+use eyre::{bail, eyre, Result};
 use futures::{pin_mut, stream::StreamExt, Stream};
 use tokio::{sync::mpsc::channel, time::sleep};
 use tokio_stream::wrappers::ReceiverStream;
@@ -209,7 +209,8 @@ async fn find_characteristic(led: &Peripheral) -> Result<Characteristic> {
     for service in led.services() {
         if service.uuid == SERVICE_UUID {
             // TODO - use UUID here
-            return Ok(service.characteristics.into_iter().nth(1).unwrap());
+            let characteristic = service.characteristics.into_iter().nth(0);
+            return characteristic.ok_or_else(|| eyre!("service didn't have characteristic"));
         }
     }
 
@@ -248,9 +249,7 @@ fn scan_forever() -> impl Stream<Item = Result<Led>> {
         let mut connected = HashSet::new();
 
         central
-            .start_scan(ScanFilter {
-                services: vec![SERVICE_UUID],
-            })
+            .start_scan(ScanFilter::default())
             .await?;
 
         loop {
