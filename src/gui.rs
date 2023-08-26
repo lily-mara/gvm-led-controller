@@ -163,6 +163,7 @@ impl eframe::App for Gui {
                             egui::Layout::centered_and_justified(Direction::TopDown),
                             |ui| ui.label("There are no light devices connected. This application will attempt to connect to any light that it can, with no configuration. Ensure your lights are powered on and in the 'APP' mode. To see a demo of the UI without controlling any real lights, re-launch the application with the `--demo` flag."),
                         );
+                        return;
                     }
 
                     ui.vertical(|ui| {
@@ -189,7 +190,9 @@ fn draw_light_group(ui: &mut Ui, light: &mut LightGuiState, update_mode: UpdateM
     ui.group(|ui| {
         ui.horizontal(|ui| {
             if light.renaming {
-                ui.text_edit_singleline(&mut light.name);
+                if ui.text_edit_singleline(&mut light.name).lost_focus() {
+                    light.renaming = false;
+                };
                 if ui.small_button("Ok").clicked() {
                     light.renaming = false;
                 }
