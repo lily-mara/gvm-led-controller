@@ -114,9 +114,12 @@ impl Gui {
 
     fn draw_global_pane(&mut self, ui: &mut Ui) {
         ui.group(|ui| {
-            ui.label("GLOBAL");
             let previous = self.global_state.clone();
-            draw_light_settings(ui, &mut self.global_state);
+            ui.toggle_value(&mut self.global_state.enabled, "GLOBAL");
+            if self.global_state.enabled {
+                draw_light_settings(ui, &mut self.global_state);
+            }
+
             if self.global_state != previous {
                 for light in self.lights.lock().unwrap().iter_mut() {
                     light.state = self.global_state.clone();
